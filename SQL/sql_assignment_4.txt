@@ -1,0 +1,63 @@
+use foodhunter;
+show tables;
+
+
+-- 1. Write a query to retrieve Customer Name, Order ID, Order Date, Amount of all customers who have placed orders.
+
+select * from customers;
+-- customer_id, first_name, last_name, phone_number, address
+
+select * from orders;
+-- order_id, customer_id, order_date, order_time, delivered_date, delivered_time,
+-- delivery_address, driver_id, total_price, delivery_fee, discount, final_price, order_rating
+
+select concat(first_name, ' ', last_name) as 'Customer Name', 
+  orders.order_id, orders.order_date, final_price as Amount from customers
+left join orders
+on customers.customer_id = orders.customer_id;
+
+
+
+-- 2. Write a query to calculate the total amount for only those customers who have placed an order.
+
+select customers.customer_id as 'Customer ID', concat(first_name, ' ', last_name) as 'Customer Name', 
+round(sum(orders.final_price),0) as 'Total Amount' from customers 
+inner join orders
+on customers.customer_id = orders.customer_id
+group by customers.customer_id, 'Customer Name';
+
+
+
+-- 3. Write a query to display the order count for each Customer ID
+
+select Customer_ID, count(Customer_ID) as 'Order Count' from 
+	(select customers.customer_id as Customer_ID, orders.order_id from customers
+	left join orders
+	on customers.customer_id = orders.customer_id) as query_1
+group by Customer_ID;
+
+
+
+-- 4. Write a query to output the customer names along with their orders for orders placed on or after August 12, 2023
+
+select concat(first_name, ' ', last_name) as 'Customer Name', orders.order_id as 'Order ID',
+  date(orders.order_date) as 'Order Date', final_price as Amount
+from customers
+inner join orders
+on customers.customer_id = orders.customer_id
+where orders.order_date >= '2023-08-11';
+
+-- the number of orders after Aug 11, 2023 is zero. But we can change that to 2022 and get results.
+
+select concat(first_name, ' ', last_name) as 'Customer Name', orders.order_id as 'Order ID',
+  date(orders.order_date) as 'Order Date', final_price as Amount
+from customers
+inner join orders
+on customers.customer_id = orders.customer_id
+where orders.order_date >= '2022-08-11';
+
+select max(order_date) from orders
+
+-- The maximum order date is Sept 29, 2022
+
+

@@ -1,0 +1,101 @@
+use foodhunter;
+
+show tables;
+-- customers, drivers, food_items, orders, orders_items, restaurants
+
+
+-- 1. Write a SQL query to rank restaurants based on the number of food items they offer. Use a window function to achieve this.
+
+select *, rank() over (order by item_count desc) as item_count_rank from
+(select restaurant_id, count(item_name) as item_count from food_items
+group by restaurant_id) as query_1;
+
+
+
+-- 2. How can we use ranking functions to find the top 3 food items (based on the quantity ordered) for each restaurant?
+
+select * from food_items;
+-- item_id, restaurant_id, item_name, food_type, price, calories
+
+select * from orders_items;
+-- order_id, item_id, quantity
+
+select * from 
+	(select *,
+	rank() over (partition by restaurant_id order by total_qty desc) as total_qty_rank 
+	from
+		(select restaurant_id, item_id, sum(quantity) as total_qty from 
+			(select restaurant_id, food_items.item_id as item_id, quantity from food_items
+			inner join orders_items
+			on food_items.item_id = orders_items.item_id) as query_1
+		group by restaurant_id, item_id) as query_2) as query_3
+where total_qty_rank < 4;
+
+
+
+-- 3. Write a SQL query to rank customers based on the total amount they have spent on orders. 
+--    Separate rankings should be calculated for vegetarian and non-vegetarian customers.
+
+select *,
+rank() over (partition by food_type order by total_amt desc) as total_amt_rank
+from 
+	(select customer_id, left(food_type,3) as food_type, round(sum(final_price),0) as total_amt from 
+		(select orders.order_id, customer_id, final_price, item_id as item_id from orders
+		inner join orders_items 
+		on orders.order_id = orders_items.order_id) as query_1
+	inner join food_items
+	on query_1.item_id = food_items.item_id
+	group by customer_id, food_type) as query_2;
+
+
+
+-- 4. How would you classify customers into different categories (like "low", "medium", and "high") based on the 
+--    total amount they've spent on orders? Write a SQL query using the CASE statement to achieve this.
+
+select max(total_amt) as max_amt_by_cust from 
+	(select customer_id, round(sum(final_price),0) as total_amt from orders
+	group by customer_id) as query_1;
+
+-- $611 is the maximum spend by a customer. 
+-- I will classify the customers into groups of <$200, $200-$400, and >$400
+
+with query_1 as 
+	(select customer_id, round(sum(final_price),0) as total_amt from orders
+	group by customer_id)
+select customer_id, total_amt, 
+case 
+when total_amt < 200 then 'low'
+when total_amt < 400 then 'medium'
+else 'high'
+end as class
+from query_1;
+
+
+
+-- 5. Write a SQL query to classify orders based on delivery time: "fast" if the delivery time is less than 30 minutes, 
+--    "medium" if it's between 30 minutes and 1 hour, and "slow" if it's more than 1 hour. Then find the number of deliveries 
+--    that come under “fast” category.
+
+-- labelling the delivery times
+
+select *,
+case 
+when delivered_time < '00:30:00' then 'fast' 
+when delivered_time < '01:00:00' then 'medium' 
+else 'slow'
+end as class
+from orders;
+
+
+-- finding the number of fast entries
+select count(class) as fast_ct from 
+	(select *,
+	case 
+	when delivered_time < '00:30:00' then 'fast' 
+	when delivered_time < '01:00:00' then 'medium' 
+	else 'slow'
+	end as class
+	from orders) as query_1
+where class='fast';
+
+
